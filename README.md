@@ -5,7 +5,7 @@ Aplicación para insertar una imagen de firma y texto opcional en documentos PDF
 ## Requisitos
 
 - Python 3.10+
-- PyMuPDF, Flask, Pillow
+- PyMuPDF, Flask, Pillow, gunicorn
 
 ```bash
 pip install -r requirements.txt
@@ -43,6 +43,7 @@ docker compose up --build
 
 - Interfaz web: [http://localhost:5000](http://localhost:5000)
 - Los PDFs del directorio `documentos/` están disponibles en `/app/documentos` dentro del contenedor.
+- Los archivos subidos (imágenes de firma, PDFs) se persisten en `uploads/`.
 - Los archivos firmados se guardan en `output/`.
 - Para firmar por lotes desde la interfaz web, subir un archivo ZIP con los PDFs.
 
