@@ -1,4 +1,6 @@
+import io
 import os
+import tempfile
 import uuid
 import zipfile
 from pathlib import Path
@@ -95,7 +97,7 @@ def upload_zip():
     extract_dir = os.path.join(app.config['UPLOAD_FOLDER'], f'zip_{session_id}')
     os.makedirs(extract_dir, exist_ok=True)
 
-    zip_path = os.path.join(app.config['UPLOAD_FOLDER'], f'upload_{session_id}.zip')
+    zip_path = os.path.join(tempfile.gettempdir(), f'upload_{session_id}.zip')
     file.save(zip_path)
 
     try:
@@ -239,6 +241,7 @@ def procesar():
     errores = []
 
     for pdf in pdfs:
+        doc = None
         try:
             doc = fitz.open(str(pdf))
             total_pages = len(doc)
@@ -249,7 +252,6 @@ def procesar():
 
             if page_idx < 0 or page_idx >= total_pages:
                 errores.append({'file': pdf.name, 'error': f'Pagina {page_idx} fuera de rango'})
-                doc.close()
                 continue
 
             page = doc[page_idx]
@@ -278,8 +280,7 @@ def procesar():
                 )
 
             output_path = Path(output_dir) / f"firmado_{pdf.name}"
-            doc.save(str(output_path))
-            doc.close()
+            doc.save(str(output_path), garbage=4, deflate=True, clean=True)
 
             exitosos.append({
                 'original': pdf.name,
@@ -287,6 +288,9 @@ def procesar():
             })
         except Exception as e:
             errores.append({'file': pdf.name, 'error': str(e)})
+        finally:
+            if doc:
+                doc.close()
 
     return jsonify({
         'exitosos': exitosos,
@@ -311,18 +315,31 @@ def descargar(filename):
 @app.route('/api/descargar-zip')
 def descargar_zip():
     output_dir = app.config['OUTPUT_FOLDER']
-    zip_path = os.path.join(output_dir, 'firmados.zip')
 
-    pdf_files = [f for f in os.listdir(output_dir) if f.lower().endswith('.pdf')]
+    requested_files = request.args.getlist('files')
+    if requested_files:
+        # Sólo incluir los archivos de la sesión actual; prevenir path traversal
+        pdf_files = [
+            f for f in requested_files
+            if f.lower().endswith('.pdf')
+            and os.path.basename(f) == f
+            and os.path.isfile(os.path.join(output_dir, f))
+        ]
+    else:
+        pdf_files = [f for f in os.listdir(output_dir) if f.lower().endswith('.pdf')]
+
     if not pdf_files:
         return jsonify({'error': 'No hay archivos para descargar'}), 404
 
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         for f in pdf_files:
             zf.write(os.path.join(output_dir, f), f)
+    buf.seek(0)
 
-    return send_file(zip_path, as_attachment=True, download_name='firmados.zip')
+    return send_file(buf, as_attachment=True, download_name='firmados.zip', mimetype='application/zip')
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    debug = os.environ.get('FLASK_DEBUG', '1') == '1'
+    app.run(host='0.0.0.0', port=5000, debug=debug)

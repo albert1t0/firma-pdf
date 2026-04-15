@@ -11,4 +11,4 @@ RUN mkdir -p uploads output
 
 EXPOSE 5000
 
-CMD ["python", "web_app.py"]
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "web_app:app"]

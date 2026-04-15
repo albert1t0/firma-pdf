@@ -135,6 +135,7 @@ uploads/
 output/
 firmados/
 documentos/
+documentos.zip
 
 # Environment variables
 .env.local

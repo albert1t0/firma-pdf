@@ -704,6 +704,9 @@ function showResults(data) {
     });
 
     if (ok > 0) {
+        const outputFiles = (data.exitosos || []).map(item => item.output);
+        const params = outputFiles.map(f => 'files=' + encodeURIComponent(f)).join('&');
+        document.getElementById('btn-download-zip').href = '/api/descargar-zip?' + params;
         document.getElementById('results-actions').style.display = '';
     }
 
