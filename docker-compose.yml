@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./documentos:/app/documentos:ro
+      - ./output:/app/output
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped

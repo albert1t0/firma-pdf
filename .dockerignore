@@ -1,0 +1,7 @@
+uploads/
+output/
+firmados/
+__pycache__/
+*.pyc
+.git/
+node_modules/

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firma PDF</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app">
+        <header class="app-header">
+            <h1>Firma PDF</h1>
+            <p class="subtitle">Firma documentos PDF con imagen y texto</p>
+        </header>
+
+        <div class="wizard">
+            <div class="stepper" id="stepper">
+                <div class="step-item active" data-step="1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Firma</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-item" data-step="2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Texto</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-item" data-step="3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Documento</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-item" data-step="4">
+                    <div class="step-number">4</div>
+                    <div class="step-label">Posici&oacute;n</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-item" data-step="5">
+                    <div class="step-number">5</div>
+                    <div class="step-label">Resultado</div>
+                </div>
+            </div>
+
+            <!-- Step 1: Signature Image -->
+            <div class="step-content active" id="step-1">
+                <h2>Imagen de Firma</h2>
+                <p class="step-desc">Selecciona la imagen que se usar&aacute; como firma digital.</p>
+                <div class="upload-zone" id="imagen-drop">
+                    <input type="file" id="imagen-input" accept="image/png,image/jpeg,image/jpg" hidden>
+                    <div class="upload-icon">&#128196;</div>
+                    <p>Arrastra una imagen aqu&iacute; o haz clic para seleccionar</p>
+                    <span class="upload-hint">PNG, JPG</span>
+                </div>
+                <div class="preview-card" id="imagen-preview-card" style="display:none;">
+                    <img id="imagen-preview" alt="Vista previa de la firma">
+                    <button class="btn-icon btn-remove" id="btn-remove-imagen" title="Eliminar imagen">&#10005;</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Text -->
+            <div class="step-content" id="step-2">
+                <h2>Texto bajo la Firma</h2>
+                <p class="step-desc">Texto opcional que se colocar&aacute; debajo de la imagen de firma.</p>
+                <div class="form-group">
+                    <label for="texto-input">Texto</label>
+                    <input type="text" id="texto-input" placeholder="Ej: Firmado digitalmente por...">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="texto-tamano">Tama&ntilde;o de fuente (pt)</label>
+                        <input type="number" id="texto-tamano" value="10" min="6" max="48" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="texto-gap">Separaci&oacute;n firma-texto (cm)</label>
+                        <input type="number" id="texto-gap" value="0.2" min="0" max="5" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: File/Directory -->
+            <div class="step-content" id="step-3">
+                <h2>Documento</h2>
+                <p class="step-desc">Selecciona un archivo PDF o un directorio con PDFs para firmar.</p>
+
+                <div class="mode-tabs">
+                    <button class="tab-btn active" data-mode="file" id="tab-file">Archivo PDF</button>
+                    <button class="tab-btn" data-mode="directory" id="tab-directory">Directorio</button>
+                </div>
+
+                <!-- File mode -->
+                <div class="mode-panel active" id="panel-file">
+                    <div class="upload-zone" id="pdf-drop">
+                        <input type="file" id="pdf-input" accept=".pdf,application/pdf" hidden>
+                        <div class="upload-icon">&#128196;</div>
+                        <p>Arrastra un PDF aqu&iacute; o haz clic para seleccionar</p>
+                        <span class="upload-hint">PDF</span>
+                    </div>
+                    <div class="file-info" id="pdf-file-info" style="display:none;">
+                        <span id="pdf-file-name"></span>
+                        <button class="btn-icon btn-remove" id="btn-remove-pdf" title="Eliminar">&#10005;</button>
+                    </div>
+                </div>
+
+                <!-- Directory mode -->
+                <div class="mode-panel" id="panel-directory">
+                    <div class="form-row">
+                        <div class="form-group" style="flex:1;">
+                            <label for="directory-path">Ruta del directorio</label>
+                            <input type="text" id="directory-path" placeholder="/app/documentos">
+                        </div>
+                        <button class="btn btn-secondary" id="btn-scan-dir" style="align-self:flex-end;">Buscar</button>
+                    </div>
+                    <div id="dir-results" style="display:none;">
+                        <p id="dir-count"></p>
+                        <ul id="dir-pdf-list"></ul>
+                    </div>
+                    <div id="dir-no-pdfs" style="display:none;">
+                        <p class="text-warning">No se encontraron archivos PDF en este directorio.</p>
+                        <div class="upload-zone upload-zone-small" id="dir-pdf-drop">
+                            <input type="file" id="dir-pdf-input" accept=".pdf,application/pdf" hidden>
+                            <p>Sube un PDF para continuar</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Page selector -->
+                <div class="form-group" id="page-selector" style="display:none;">
+                    <label for="page-select">P&aacute;gina donde firmar</label>
+                    <select id="page-select"></select>
+                </div>
+            </div>
+
+            <!-- Step 4: Preview & Position -->
+            <div class="step-content" id="step-4">
+                <h2>Ubicar Firma</h2>
+                <p class="step-desc">Arrastra las cajas para posicionar la firma y el texto en la p&aacute;gina.</p>
+
+                <div class="preview-controls">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Ancho firma (cm)</label>
+                            <input type="number" id="firma-ancho" value="5" min="0.5" max="20" step="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label>Alto firma (cm)</label>
+                            <input type="number" id="firma-alto" value="2" min="0.5" max="10" step="0.5">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="preview-container" id="preview-container">
+                    <div class="preview-wrapper" id="preview-wrapper">
+                        <img id="page-preview" alt="Vista previa de la p&aacute;gina">
+                        <div class="overlay-box firma-box" id="firma-box">
+                            <img id="firma-thumb" alt="">
+                            <div class="resize-handle" id="firma-resize"></div>
+                        </div>
+                        <div class="overlay-box texto-box" id="texto-box" style="display:none;">
+                            <span id="texto-preview-label"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="position-info" id="position-info">
+                    <div class="pos-item">
+                        <span class="pos-label">Firma:</span>
+                        <span>X: <strong id="pos-firma-x">0.0</strong> cm</span>
+                        <span>Y: <strong id="pos-firma-y">0.0</strong> cm</span>
+                    </div>
+                    <div class="pos-item" id="pos-texto-info" style="display:none;">
+                        <span class="pos-label">Texto:</span>
+                        <span>X: <strong id="pos-texto-x">0.0</strong> cm</span>
+                        <span>Y: <strong id="pos-texto-y">0.0</strong> cm</span>
+                    </div>
+                    <div class="pos-item">
+                        <span class="pos-label">P&aacute;gina:</span>
+                        <span><strong id="pos-page-size">-</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: Results -->
+            <div class="step-content" id="step-5">
+                <h2>Resultado</h2>
+                <div id="results-container">
+                    <div class="results-loading" id="results-loading" style="display:none;">
+                        <div class="spinner"></div>
+                        <p>Procesando documentos...</p>
+                    </div>
+                    <div id="results-summary" style="display:none;"></div>
+                    <div id="results-list" style="display:none;"></div>
+                    <div id="results-actions" style="display:none;">
+                        <a class="btn btn-primary" id="btn-download-zip" href="/api/descargar-zip">Descargar todos (ZIP)</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="wizard-nav">
+                <button class="btn btn-secondary" id="btn-prev" disabled>&larr; Anterior</button>
+                <button class="btn btn-secondary" id="btn-skip" style="display:none;">Omitir</button>
+                <button class="btn btn-primary" id="btn-next">Siguiente &rarr;</button>
+                <button class="btn btn-primary" id="btn-process" style="display:none;">Procesar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
