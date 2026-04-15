@@ -44,6 +44,7 @@ docker compose up --build
 - Interfaz web: [http://localhost:5000](http://localhost:5000)
 - Los PDFs del directorio `documentos/` están disponibles en `/app/documentos` dentro del contenedor.
 - Los archivos firmados se guardan en `output/`.
+- Para firmar por lotes desde la interfaz web, subir un archivo ZIP con los PDFs.
 
 ### Flujo de uso
 
@@ -51,14 +52,14 @@ docker compose up --build
 |---|---|
 | **1. Firma** | Subir la imagen de firma (PNG/JPG). Obligatorio. |
 | **2. Texto** | Ingresar texto opcional bajo la firma. Se puede omitir. |
-| **3. Documento** | Subir un PDF individual o indicar una ruta de directorio con PDFs. Seleccionar la página destino. |
+| **3. Documento** | Subir un PDF individual o un archivo ZIP con PDFs. Seleccionar la página destino. |
 | **4. Posición** | Vista previa de la página con cajas arrastrables para firma (verde) y texto (azul). Se pueden redimensionar. Las coordenadas se muestran en cm en tiempo real. |
 | **5. Resultado** | Procesamiento con resumen y enlaces de descarga individual o ZIP. |
 
 ### Modos de selección de documentos
 
 - **Archivo PDF**: Se sube un archivo. Se muestra selector de página.
-- **Directorio**: Se ingresa una ruta en el servidor. Se listan los PDFs encontrados y se usa el primero como vista previa. Todos los PDFs del directorio se firman con la misma posición.
+- **Archivo ZIP**: Se sube un ZIP con PDFs. Se descomprime automáticamente, se listan los PDFs encontrados y se usa el primero como vista previa. Todos los PDFs se firman con la misma posición. El resultado se ofrece como descarga en ZIP.
 
 ### Estructura del proyecto
 

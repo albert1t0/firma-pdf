@@ -83,41 +83,65 @@ def upload_pdf():
     })
 
 
-@app.route('/api/listar-directorio', methods=['POST'])
-def listar_directorio():
-    data = request.get_json()
-    dir_path = data.get('path', '').strip()
+@app.route('/api/upload-zip', methods=['POST'])
+def upload_zip():
+    if 'zip' not in request.files:
+        return jsonify({'error': 'No se envio archivo'}), 400
+    file = request.files['zip']
+    if file.filename == '':
+        return jsonify({'error': 'No se selecciono archivo'}), 400
 
-    if not dir_path:
-        return jsonify({'error': 'Ruta vacia'}), 400
-    if not os.path.isdir(dir_path):
-        return jsonify({'error': f'Directorio no encontrado: {dir_path}'}), 404
+    session_id = uuid.uuid4().hex[:8]
+    extract_dir = os.path.join(app.config['UPLOAD_FOLDER'], f'zip_{session_id}')
+    os.makedirs(extract_dir, exist_ok=True)
 
-    pdfs = sorted([f for f in os.listdir(dir_path) if f.lower().endswith('.pdf')])
+    zip_path = os.path.join(app.config['UPLOAD_FOLDER'], f'upload_{session_id}.zip')
+    file.save(zip_path)
+
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            zf.extractall(extract_dir)
+    except Exception as e:
+        os.remove(zip_path)
+        return jsonify({'error': f'Error al descomprimir ZIP: {e}'}), 400
+    finally:
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+
+    pdfs = []
+    for root, _dirs, files in os.walk(extract_dir):
+        for f in sorted(files):
+            if f.lower().endswith('.pdf'):
+                pdfs.append(os.path.join(root, f))
+
+    if not pdfs:
+        import shutil
+        shutil.rmtree(extract_dir, ignore_errors=True)
+        return jsonify({'error': 'No se encontraron archivos PDF en el ZIP'}), 400
 
     first_pdf_info = None
-    if pdfs:
-        first_path = os.path.join(dir_path, pdfs[0])
-        try:
-            doc = fitz.open(first_path)
-            pages = len(doc)
-            page = doc[0]
-            first_pdf_info = {
-                'path': first_path,
-                'name': pdfs[0],
-                'pages': pages,
-                'page_width_cm': round(page.rect.width / CM_TO_PT, 2),
-                'page_height_cm': round(page.rect.height / CM_TO_PT, 2),
-            }
-            doc.close()
-        except Exception:
-            pass
+    try:
+        doc = fitz.open(pdfs[0])
+        page = doc[0]
+        first_pdf_info = {
+            'path': pdfs[0],
+            'name': os.path.basename(pdfs[0]),
+            'pages': len(doc),
+            'page_width_cm': round(page.rect.width / CM_TO_PT, 2),
+            'page_height_cm': round(page.rect.height / CM_TO_PT, 2),
+        }
+        doc.close()
+    except Exception:
+        pass
+
+    pdf_names = [os.path.basename(p) for p in pdfs]
 
     return jsonify({
-        'path': dir_path,
-        'pdfs': pdfs,
+        'extract_dir': extract_dir,
+        'pdfs': pdf_names,
         'count': len(pdfs),
         'first_pdf': first_pdf_info,
+        'original_name': file.filename,
     })
 
 
@@ -183,7 +207,7 @@ def procesar():
 
     mode = data.get('mode')
     pdf_path = data.get('pdf_path')
-    directory_path = data.get('directory_path')
+    extract_dir = data.get('extract_dir')
 
     output_dir = app.config['OUTPUT_FOLDER']
 
@@ -194,16 +218,17 @@ def procesar():
         if not pdf_path or not os.path.exists(pdf_path):
             return jsonify({'error': 'PDF no encontrado'}), 404
         pdfs = [Path(pdf_path)]
-    elif mode == 'directory':
-        if not directory_path or not os.path.isdir(directory_path):
-            return jsonify({'error': 'Directorio no encontrado'}), 404
+    elif mode == 'zip':
+        if not extract_dir or not os.path.isdir(extract_dir):
+            return jsonify({'error': 'Directorio de extraccion no encontrado'}), 404
         pdfs = sorted([
-            Path(directory_path) / f
-            for f in os.listdir(directory_path)
+            Path(root) / f
+            for root, _dirs, files in os.walk(extract_dir)
+            for f in sorted(files)
             if f.lower().endswith('.pdf')
         ])
         if not pdfs:
-            return jsonify({'error': 'No se encontraron PDFs en el directorio'}), 404
+            return jsonify({'error': 'No se encontraron PDFs en el ZIP'}), 404
     else:
         return jsonify({'error': 'Modo no valido'}), 400
 

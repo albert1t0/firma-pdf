@@ -77,14 +77,14 @@
                 </div>
             </div>
 
-            <!-- Step 3: File/Directory -->
+            <!-- Step 3: File/ZIP -->
             <div class="step-content" id="step-3">
                 <h2>Documento</h2>
-                <p class="step-desc">Selecciona un archivo PDF o un directorio con PDFs para firmar.</p>
+                <p class="step-desc">Selecciona un archivo PDF o un archivo ZIP con PDFs para firmar.</p>
 
                 <div class="mode-tabs">
                     <button class="tab-btn active" data-mode="file" id="tab-file">Archivo PDF</button>
-                    <button class="tab-btn" data-mode="directory" id="tab-directory">Directorio</button>
+                    <button class="tab-btn" data-mode="zip" id="tab-zip">Archivo ZIP</button>
                 </div>
 
                 <!-- File mode -->
@@ -101,25 +101,21 @@
                     </div>
                 </div>
 
-                <!-- Directory mode -->
-                <div class="mode-panel" id="panel-directory">
-                    <div class="form-row">
-                        <div class="form-group" style="flex:1;">
-                            <label for="directory-path">Ruta del directorio</label>
-                            <input type="text" id="directory-path" placeholder="/app/documentos">
-                        </div>
-                        <button class="btn btn-secondary" id="btn-scan-dir" style="align-self:flex-end;">Buscar</button>
+                <!-- ZIP mode -->
+                <div class="mode-panel" id="panel-zip">
+                    <div class="upload-zone" id="zip-drop">
+                        <input type="file" id="zip-input" accept=".zip,application/zip,application/x-zip-compressed" hidden>
+                        <div class="upload-icon">&#128230;</div>
+                        <p>Arrastra un archivo ZIP con PDFs aqu&iacute; o haz clic para seleccionar</p>
+                        <span class="upload-hint">ZIP</span>
                     </div>
-                    <div id="dir-results" style="display:none;">
-                        <p id="dir-count"></p>
-                        <ul id="dir-pdf-list"></ul>
+                    <div class="file-info" id="zip-file-info" style="display:none;">
+                        <span id="zip-file-name"></span>
+                        <button class="btn-icon btn-remove" id="btn-remove-zip" title="Eliminar">&#10005;</button>
                     </div>
-                    <div id="dir-no-pdfs" style="display:none;">
-                        <p class="text-warning">No se encontraron archivos PDF en este directorio.</p>
-                        <div class="upload-zone upload-zone-small" id="dir-pdf-drop">
-                            <input type="file" id="dir-pdf-input" accept=".pdf,application/pdf" hidden>
-                            <p>Sube un PDF para continuar</p>
-                        </div>
+                    <div id="zip-results" style="display:none;">
+                        <p id="zip-count"></p>
+                        <ul id="zip-pdf-list"></ul>
                     </div>
                 </div>
 

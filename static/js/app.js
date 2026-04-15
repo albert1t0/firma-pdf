@@ -9,7 +9,7 @@ const state = {
     textoGap: 0.2,
     mode: 'file',
     pdfPath: null,
-    directoryPath: null,
+    extractDir: null,
     pdfList: [],
     totalPages: 0,
     selectedPage: -1,
@@ -28,7 +28,7 @@ function init() {
     setupStepperClicks();
     setupImageUpload();
     setupPdfUpload();
-    setupDirectoryMode();
+    setupZipUpload();
     setupModeTabs();
     setupPageSelector();
     setupDimensionInputs();
@@ -109,8 +109,8 @@ function setupNavButtons() {
                     showToast('Selecciona un archivo PDF', 'warning');
                     return;
                 }
-                if (state.mode === 'directory' && !state.pdfPath && state.pdfList.length === 0) {
-                    showToast('No hay PDFs para procesar', 'warning');
+                if (state.mode === 'zip' && !state.extractDir) {
+                    showToast('Selecciona un archivo ZIP', 'warning');
                     return;
                 }
             }
@@ -241,37 +241,35 @@ function handlePdfUpload(file) {
         .catch(() => showToast('Error al subir PDF', 'error'));
 }
 
-function setupDirectoryMode() {
-    const btnScan = document.getElementById('btn-scan-dir');
-    const pathInput = document.getElementById('directory-path');
+function setupZipUpload() {
+    const drop = document.getElementById('zip-drop');
+    const input = document.getElementById('zip-input');
+    const btnRemove = document.getElementById('btn-remove-zip');
 
-    btnScan.addEventListener('click', () => {
-        const path = pathInput.value.trim();
-        if (!path) {
-            showToast('Ingresa una ruta de directorio', 'warning');
-            return;
-        }
-        scanDirectory(path);
+    setupDropZone(drop, input);
+
+    input.addEventListener('change', () => {
+        if (input.files.length) handleZipUpload(input.files[0]);
     });
 
-    pathInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') btnScan.click();
-    });
-
-    const dirPdfDrop = document.getElementById('dir-pdf-drop');
-    const dirPdfInput = document.getElementById('dir-pdf-input');
-    setupDropZone(dirPdfDrop, dirPdfInput);
-    dirPdfInput.addEventListener('change', () => {
-        if (dirPdfInput.files.length) handlePdfUpload(dirPdfInput.files[0]);
+    btnRemove.addEventListener('click', () => {
+        state.extractDir = null;
+        state.pdfList = [];
+        state.pdfPath = null;
+        state.totalPages = 0;
+        document.getElementById('zip-file-info').style.display = 'none';
+        document.getElementById('zip-results').style.display = 'none';
+        document.getElementById('zip-drop').style.display = '';
+        document.getElementById('page-selector').style.display = 'none';
+        input.value = '';
     });
 }
 
-function scanDirectory(path) {
-    fetch('/api/listar-directorio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path }),
-    })
+function handleZipUpload(file) {
+    const formData = new FormData();
+    formData.append('zip', file);
+
+    fetch('/api/upload-zip', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             if (data.error) {
@@ -279,43 +277,35 @@ function scanDirectory(path) {
                 return;
             }
 
-            state.directoryPath = data.path;
+            state.extractDir = data.extract_dir;
             state.pdfList = data.pdfs;
 
-            const dirResults = document.getElementById('dir-results');
-            const dirNoPdfs = document.getElementById('dir-no-pdfs');
+            document.getElementById('zip-file-name').textContent = data.original_name;
+            document.getElementById('zip-drop').style.display = 'none';
+            document.getElementById('zip-file-info').style.display = 'flex';
 
-            if (data.count > 0) {
-                document.getElementById('dir-count').textContent = data.count + ' archivo(s) PDF encontrado(s):';
-                const list = document.getElementById('dir-pdf-list');
-                list.innerHTML = '';
-                data.pdfs.forEach(f => {
-                    const li = document.createElement('li');
-                    li.textContent = f;
-                    list.appendChild(li);
-                });
+            const zipResults = document.getElementById('zip-results');
+            document.getElementById('zip-count').textContent = data.count + ' archivo(s) PDF encontrado(s):';
+            const list = document.getElementById('zip-pdf-list');
+            list.innerHTML = '';
+            data.pdfs.forEach(f => {
+                const li = document.createElement('li');
+                li.textContent = f;
+                list.appendChild(li);
+            });
+            zipResults.style.display = '';
 
-                dirResults.style.display = '';
-                dirNoPdfs.style.display = 'none';
-
-                if (data.first_pdf) {
-                    state.pdfPath = data.first_pdf.path;
-                    state.totalPages = data.first_pdf.pages;
-                    state.pageWidthCm = data.first_pdf.page_width_cm;
-                    state.pageHeightCm = data.first_pdf.page_height_cm;
-                    showPageSelector(data.first_pdf.pages);
-                }
-            } else {
-                dirResults.style.display = 'none';
-                dirNoPdfs.style.display = '';
-                state.pdfPath = null;
-                state.totalPages = 0;
-                document.getElementById('page-selector').style.display = 'none';
+            if (data.first_pdf) {
+                state.pdfPath = data.first_pdf.path;
+                state.totalPages = data.first_pdf.pages;
+                state.pageWidthCm = data.first_pdf.page_width_cm;
+                state.pageHeightCm = data.first_pdf.page_height_cm;
+                showPageSelector(data.first_pdf.pages);
             }
 
-            showToast(data.count + ' PDFs encontrados', 'success');
+            showToast(data.count + ' PDFs encontrados en el ZIP', 'success');
         })
-        .catch(() => showToast('Error al escanear directorio', 'error'));
+        .catch(() => showToast('Error al subir ZIP', 'error'));
 }
 
 function setupModeTabs() {
@@ -655,7 +645,7 @@ function processFiles() {
         pagina: state.selectedPage,
         mode: state.mode,
         pdf_path: state.pdfPath,
-        directory_path: state.directoryPath,
+        extract_dir: state.extractDir,
     };
 
     fetch('/api/procesar', {
